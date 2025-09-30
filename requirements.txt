@@ -1,0 +1,9 @@
+discord.py
+python-dotenv
+pandas
+openpyxl
+mysql-connector-python
+langchain
+langgraph
+langchain-google-genai
+google-genai

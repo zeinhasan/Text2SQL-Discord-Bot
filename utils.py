@@ -1,0 +1,34 @@
+import pandas as pd
+from typing import List, Dict
+import os
+
+def export_data_to_excel(data: List[Dict], filename: str = "query_result.xlsx") -> str:
+    """
+    Converts a list of dictionaries into an Excel file in the /output folder.
+
+    Args:
+        data (List[Dict]): The data to export, typically from a query result.
+        filename (str, optional): The name for the output file. Defaults to "query_result.xlsx".
+
+    Returns:
+        str: The absolute path to the newly created Excel file.
+        
+    Raises:
+        ValueError: If the input data is empty or not in the expected format.
+    """
+    if not data or not isinstance(data, list) or not isinstance(data[0], dict):
+        raise ValueError("Invalid or empty data provided for Excel export.")
+
+    df = pd.DataFrame(data)
+    
+    # Create the output directory if it doesn't exist
+    output_dir = "output"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Use an absolute path to avoid issues with the current working directory
+    file_path = os.path.abspath(os.path.join(output_dir, filename))
+    
+    df.to_excel(file_path, index=False)
+    
+    print(f"--- [UTILS] Data successfully exported to {file_path} ---")
+    return file_path
