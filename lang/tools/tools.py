@@ -78,11 +78,11 @@ def _run_sql_query(query: str) -> List[Dict[str, Any]]:
 # --- HIGH-LEVEL TOOLS (Updated to use the sanitizer) ---
 
 @tool
-def query_database_and_get_text_result(question: str) -> str:
+def get_database_info(question: str) -> str:
     """
-    Use this tool for any user question that requires information from the database
-    but does NOT ask for a file export. It will generate SQL, run it, and return a
-    formatted text summary of the answer.
+    Use this tool to answer any user questions that require information from the database.
+    This tool generates and executes SQL queries and returns a formatted text summary of the answer.
+    It should not be used for requests that require file exports.
     """
     print(f"--- [TOOL_CALLED] query_database_and_get_text_result for question: '{question}' ---")
     schema = _get_database_schema()
@@ -103,11 +103,10 @@ def query_database_and_get_text_result(question: str) -> str:
     return final_answer
 
 @tool
-def query_database_and_export_to_excel(question: str) -> str:
+def export_database_info_to_excel(question: str) -> str:
     """
-    Use this tool for any user question that requires data from the database AND
-    explicitly asks for it to be exported to a file, excel, or spreadsheet.
-    It will generate SQL, run it, create an Excel file with a dynamic name (tablename_timestamp.xlsx), and return the file path.
+    Use this tool for any user question that requires data from the database and explicitly asks for it to be exported to a file, such as Excel or a spreadsheet.
+    This tool generates and executes an SQL query, creates an Excel file with a dynamic name (e.g., 'tablename_timestamp.xlsx'), and returns the file path.
     """
     print(f"--- [TOOL_CALLED] query_database_and_export_to_excel for question: '{question}' ---")
     schema = _get_database_schema()
@@ -138,9 +137,9 @@ def query_database_and_export_to_excel(question: str) -> str:
     return file_path
 
 @tool
-def list_database_tables() -> str:
+def get_database_tables() -> str:
     """
-    Use this specific tool when the user asks what tables are available in the database.
+    Use this tool when the user asks for the available tables in the database.
     It returns a formatted list of all table names.
     """
     print("--- [TOOL_CALLED] list_database_tables ---")
@@ -163,7 +162,7 @@ def list_database_tables() -> str:
         return f"An error occurred while trying to list tables: {e}"
     
 all_tools = [
-    query_database_and_get_text_result,
-    query_database_and_export_to_excel,
-    list_database_tables 
+    get_database_info,
+    export_database_info_to_excel,
+    get_database_tables
 ]

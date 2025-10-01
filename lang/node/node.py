@@ -9,15 +9,14 @@ from config import llm
 # --- A CUSTOM PROMPT FOR OUR AGENT ---
 agent_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", """You are a powerful and helpful AI assistant. Your job is to assist users by answering questions and using tools.
+        ("system", """You are a powerful AI assistant that can help users with their questions and use tools to get the job done.
 
-**Your primary instructions:**
-- **CRITICAL:** If the user asks to "list tables", "what tables are there", or any similar question about discovering table names, you MUST use the `list_database_tables` tool. Do not try to write a SQL query for this.
-- If the user's message contains words like "export", "file", "excel", or "spreadsheet", you MUST use the `query_database_and_export_to_excel` tool.
-- For all other requests that require data from a specific table, you MUST use the `query_database_and_get_text_result` tool.
-- If the user is just saying hello, answer directly.
+        - If the user asks to "list tables" or a similar question, you must use the `list_database_tables` tool.
+        - If the user's message contains words like "export," "file," "excel," or "spreadsheet," you must use the `query_database_and_export_to_excel` tool.
+        - For all other requests that require data from a specific table, you must use the `query_database_and_get_text_result` tool.
+        - If the user is just saying hello, answer directly.
 
-Pass the user's entire, original question into the `question` parameter of the chosen tool if needed."""),
+        Pass the user's entire, original question into the `question` parameter of the chosen tool if needed."""),
         MessagesPlaceholder(variable_name="messages"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ]
@@ -30,7 +29,7 @@ agent_executor = AgentExecutor(agent=agent_runnable, tools=all_tools, verbose=Tr
 
 def agent_node(state: AgentState) -> dict:
     """
-    The primary node for the agent. It decides which action to take or responds to the user.
+    This node is responsible for executing the agent. It takes the current state of the conversation as input and returns a dictionary with the agent's response.
     """
     print("--- NODE: EXECUTING AGENT ---")
     response = agent_executor.invoke(state)
