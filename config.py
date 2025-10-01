@@ -26,4 +26,11 @@ llm = ChatGoogleGenerativeAI(
     google_api_key=GOOGLE_API_KEY,
     convert_system_message_to_human=True
 )
+# Create a new LLM object for image tasks
+print("--- [CONFIG] Creating image processing model instance... ---")
+image_llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash-image-preview",
+    google_api_key=GOOGLE_API_KEY,
+    convert_system_message_to_human=True
+)
 print(f"--- [CONFIG] LLM Initialized with model: {GEMINI_MODEL_NAME} ---")
