@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-# Load environment variables from a .env file.
+# Load environment variables from the .env file.
 load_dotenv()
 
 # --- Discord Credentials ---
@@ -20,7 +20,7 @@ GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash-latest")
 
 # --- Central LLM Object Initialization ---
 print("--- [CONFIG] Initializing LLM... ---")
-# This model is for general chat and tool use (non-image tasks)
+# Initialize the primary LLM for general chat and tool use.
 llm = ChatGoogleGenerativeAI(
     model=GEMINI_MODEL_NAME,
     google_api_key=GOOGLE_API_KEY,
@@ -29,7 +29,7 @@ llm = ChatGoogleGenerativeAI(
 print(f"--- [CONFIG] LLM Initialized with model: {GEMINI_MODEL_NAME} ---")
 
 
-# specifically for generating and modifying images.
+# Initialize a separate LLM specifically for image generation and modification.
 print("--- [CONFIG] Initializing Image Generation LLM... ---")
 image_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-image-preview",

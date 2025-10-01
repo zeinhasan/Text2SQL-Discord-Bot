@@ -37,7 +37,7 @@ def find_excel_path_in_response(response_text: str) -> str | None:
     Searches the agent's final text response for an Excel file path.
     """
     print(f"--- [UTILS] Searching for Excel path in: '{response_text}' ---")
-    # This regex now finds both absolute and relative paths.
+    # Regex to find Excel file paths (absolute or relative) in the 'output' directory.
     match = re.search(r"([a-zA-Z]:[\\/]|[/]|[\\/])?[\w\\/.-]*output[\\/][\w\\/.-]+\.xlsx", response_text, re.IGNORECASE)
     
     if match:
@@ -55,7 +55,7 @@ def find_image_path_in_response(response_text: str) -> str | None:
     Searches the agent's final text response for an image file path.
     """
     print(f"--- [UTILS] Searching for image path in: '{response_text}' ---")
-    # This regex now finds both absolute and relative paths.
+    # Regex to find image file paths (absolute or relative) in the 'output' directory.
     match = re.search(r"([a-zA-Z]:[\\/]|[/]|[\\/])?[\w\\/.-]*output[\\/][\w\\/.-]+\.(png|jpg|jpeg)", response_text, re.IGNORECASE)
     
     if match:

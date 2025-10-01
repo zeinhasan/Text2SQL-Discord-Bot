@@ -58,31 +58,41 @@ async def on_message(message):
     """
     Handles incoming messages, processing mentions and attachments.
     """
+    # Ignore messages sent by the bot itself to prevent loops.
     if message.author == bot.user:
         return
 
+    # Process messages where the bot is mentioned.
     if bot.user.mentioned_in(message):
+        # Extract the user's message, removing the bot's mention.
         user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()
         print(f"--- [ON_MESSAGE] Received mention from {message.author}: '{user_message}' ---")
 
-        thread = await message.channel.create_thread(name=f"Responding to {message.author.display_name}", type=discord.ChannelType.public_thread)
+        # Create a new thread for the conversation to keep the channel clean.
+        thread = await message.channel.create_thread(
+            name=f"Responding to {message.author.display_name}",
+            type=discord.ChannelType.public_thread
+        )
         
-        # --- FIX: Store the status message object ---
-        # Instead of just sending a message, we store it in the 'status_message' variable.
+        # Send an initial status message to acknowledge the request.
         status_message = await thread.send("Processing your request...")
 
+        # Initialize the content to be sent to the language model.
         final_user_content = user_message
 
         try:
+            # --- Attachment Handling ---
             if message.attachments:
                 print(f"--- [ON_MESSAGE] Found {len(message.attachments)} attachment(s). ---")
-                attachment = message.attachments[0]
+                attachment = message.attachments
                 file_path = os.path.join("uploads", attachment.filename)
                 await attachment.save(file_path)
                 print(f"--- [ON_MESSAGE] Saved attachment to {file_path} ---")
 
+                # Process the uploaded file to extract its content.
                 processed_file = process_uploaded_file(file_path)
 
+                # Prepare the input for the language model based on the file type.
                 if processed_file['type'] == 'image':
                     image_data = processed_file['content']
                     final_user_content = [
@@ -91,40 +101,47 @@ async def on_message(message):
                     ]
                     print("--- [ON_MESSAGE] Prepared multimodal input for LLM (image). ---")
                 else:
+                    # For text-based files, prepend the content to the user's message.
                     file_text_content = processed_file['content']
                     final_user_content = f"File Content:\n{file_text_content}\n\n---\n\nUser Question: {user_message}"
                     print("--- [ON_MESSAGE] Prepended text file content to user message. ---")
 
+            # --- LangGraph Invocation ---
+            # Prepare the final input for the LangGraph agent.
             inputs = {"messages": [HumanMessage(content=final_user_content)]}
             
             print("--- [ON_MESSAGE] Invoking LangGraph with prepared inputs... ---")
+            # Run the synchronous LangGraph agent in a separate thread to avoid blocking.
             loop = asyncio.get_event_loop()
             final_state = await loop.run_in_executor(None, lambda: app.invoke(inputs))
             
+            # Extract the final response from the agent's state.
             print("--- [ON_MESSAGE] LangGraph invocation finished. Processing final state. ---")
             response_content = str(final_state['messages'][-1].content).strip()
 
+            # --- Response Handling ---
+            # Check if the response contains a path to an Excel or image file.
             excel_file_path = find_excel_path_in_response(response_content)
             image_file_path = find_image_path_in_response(response_content)
 
             if excel_file_path:
+                # If an Excel file was generated, send it as an attachment.
                 print(f"--- [ON_MESSAGE] Sending Excel file: {excel_file_path} ---")
-                # --- FIX: Edit the 'status_message' content ---
                 await status_message.edit(content="Here is the Excel file you requested:")
                 await thread.send(file=discord.File(excel_file_path))
             elif image_file_path:
+                # If an image file was generated, send it as an attachment.
                 print(f"--- [ON_MESSAGE] Sending Image file: {image_file_path} ---")
-                # --- FIX: Edit the 'status_message' content ---
                 await status_message.edit(content="Here is your generated image:")
                 await thread.send(file=discord.File(image_file_path))
             else:
+                # Otherwise, send the text-based response.
                 print(f"--- [ON_MESSAGE] No file path found. Sending text response. ---")
-                # --- FIX: Edit the 'status_message' content ---
                 await status_message.edit(content=response_content)
 
         except Exception as e:
+            # --- Error Handling ---
             print(f"--- [ON_MESSAGE_ERROR] An unexpected error occurred: {e} ---")
-            # --- FIX: Edit the 'status_message' content ---
             await status_message.edit(content=f"An unexpected error occurred. Please check the logs.")
 
 # --- Run the Bot ---

@@ -11,8 +11,9 @@ import base64
 from config import image_llm, DB_HOST, DB_USER, DB_PASSWORD, DB_NAME
 from utils import export_data_to_excel
 
-# --- Helper Functions (No Changes) ---
+# --- Internal Helper Functions ---
 def _get_db_connection():
+    """Establishes a connection to the MySQL database."""
     try:
         conn = mysql.connector.connect(host=DB_HOST, user=DB_USER, password=DB_PASSWORD, database=DB_NAME)
         if conn.is_connected(): return conn
@@ -20,6 +21,7 @@ def _get_db_connection():
         return {"error": str(e)}
 
 def _get_image_base64_from_response(response_message: AIMessage) -> str | None:
+    """Extracts the base64 encoded image data from an AIMessage."""
     if not isinstance(response_message.content, list): return None
     for part in response_message.content:
         if isinstance(part, dict) and "image_url" in part:
@@ -28,6 +30,7 @@ def _get_image_base64_from_response(response_message: AIMessage) -> str | None:
     return None
 
 def _generate_or_modify_image(prompt: str, image_data_base64: str | None = None) -> str:
+    """Generates a new image or modifies an existing one using the image model."""
     print(f"--- [IMAGE_TOOL] Initializing image generation: '{prompt[:50]}...' ---")
     try:
         content = [{"type": "text", "text": prompt}]
@@ -81,10 +84,8 @@ def export_to_excel(query: str, table_name: str) -> str:
     conn = _get_db_connection()
     if isinstance(conn, dict): return f"Error connecting to database: {conn['error']}"
     try:
-        # --- FILENAME IS NOW GENERATED HERE ---
-        # Get the current local timestamp from the server
+        # Generate a dynamic filename to avoid overwrites.
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # Sanitize table_name and create the final filename
         safe_table_name = "".join(c for c in table_name if c.isalnum() or c in ('_', '-')).rstrip()
         filename = f"{safe_table_name}_{timestamp}.xlsx"
         print(f"--- [TOOL] Generated filename: {filename} ---")
@@ -94,7 +95,7 @@ def export_to_excel(query: str, table_name: str) -> str:
         data = cursor.fetchall()
         if not data: return "Query returned no data to export."
         
-        # Pass the locally generated filename to the utility function
+        # Use the utility function to export the data.
         file_path = export_data_to_excel(data, filename)
         return f"Successfully exported data to {file_path}"
     finally:
@@ -129,7 +130,7 @@ def generate_image(prompt: str, base64_image_data: str | None = None) -> str:
         return file_path
     return f"Successfully generated image and saved it to the following path: {file_path}"
 
-# The complete list of tools available to the agent
+# A list of all tools that the agent can use.
 all_tools = [
     query_database,
     export_to_excel,

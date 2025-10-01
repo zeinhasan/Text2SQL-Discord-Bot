@@ -6,7 +6,8 @@ from lang.state.state import AgentState
 from lang.tools.tools import all_tools, generate_image
 from config import llm
 
-# --- Final, Corrected Agent Prompt ---
+# --- Agent Prompt ---
+# This prompt template is used to instruct the agent on how to behave.
 agent_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", """You are a powerful AI assistant. Your primary function is to answer questions using the provided tools. Follow these rules without deviation:
@@ -20,7 +21,8 @@ agent_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
-# --- Agent Executor (No Changes) ---
+# --- Agent Executor ---
+# This creates the agent executor by combining the LLM, tools, and prompt.
 agent_runnable = create_tool_calling_agent(llm, all_tools, agent_prompt)
 agent_executor = AgentExecutor(agent=agent_runnable, tools=all_tools, verbose=True)
 
@@ -36,7 +38,7 @@ def agent_node(state: AgentState) -> dict:
 
 def generate_image_node(state: AgentState) -> dict:
     """
-a dedicated node that directly calls the image generation tool.
+A dedicated node that directly calls the image generation tool.
     """
     print("--- [NODE] Executing Dedicated Image Generation Node ---")
     last_message = state["messages"][-1]

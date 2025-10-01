@@ -6,7 +6,7 @@ from typing import Dict, Any, Literal
 
 def process_uploaded_file(file_path: str) -> Dict[str, Any]:
     """
-    Processes an uploaded file and extracts its content.
+    Processes an uploaded file, extracts its content, and determines its type.
 
     Args:
         file_path (str): The local path to the downloaded file.

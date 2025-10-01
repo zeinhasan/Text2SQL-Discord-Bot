@@ -4,13 +4,12 @@ from langgraph.graph.message import add_messages
 
 class AgentState(TypedDict):
     """
-    Represents the state of our agent graph.
+    Defines the state structure for the agent graph.
 
-    This TypedDict defines the structure of the data that is passed between
-    the nodes of the LangGraph workflow.
+    This TypedDict is used to pass data between the nodes of the LangGraph workflow.
 
     Attributes:
-        messages (List[BaseMessage]): The history of messages in the conversation.
-        `add_messages` ensures new messages are appended to the list, not overwritten.
+        messages: A list of messages in the conversation history. The `add_messages`
+                  annotator ensures that new messages are always appended.
     """
     messages: Annotated[List[BaseMessage], add_messages]

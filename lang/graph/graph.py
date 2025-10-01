@@ -7,8 +7,8 @@ import re
 
 def route_to_image_or_agent(state: AgentState) -> str:
     """
-    This router checks the user's latest message to decide whether to route
-    to the dedicated image generation node or the general agent.
+    Routes the workflow to either the image generation node or the general agent
+    based on the content of the user's last message.
     """
     print("--- [ROUTER] Deciding workflow path... ---")
     last_message = state["messages"][-1]
@@ -16,8 +16,7 @@ def route_to_image_or_agent(state: AgentState) -> str:
     prompt_text = ""
     image_data_exists = False
 
-    # --- UPDATED ROUTER LOGIC ---
-    # This logic correctly handles the new list-based message content.
+    # Handle cases where the message contains both text and images.
     if isinstance(last_message.content, list):
         for part in last_message.content:
             if isinstance(part, dict):
@@ -43,7 +42,7 @@ def route_to_image_or_agent(state: AgentState) -> str:
 
 def should_continue(state: AgentState) -> str:
     """
-    Determines if the general agent should continue using tools or end.
+    Determines whether the general agent should continue using tools or end the workflow.
     """
     print("--- [AGENT_ROUTER] Deciding next step for agent... ---")
     if hasattr(state["messages"][-1], "tool_calls") and state["messages"][-1].tool_calls:
@@ -56,14 +55,13 @@ def should_continue(state: AgentState) -> str:
 # --- Build the Graph ---
 workflow = StateGraph(AgentState)
 
-# Add all the nodes
+# Define the nodes for the graph.
 workflow.add_node("agent", agent_node)
 workflow.add_node("tools", ToolNode(all_tools))
 workflow.add_node("generate_image_node", generate_image_node)
 
-# GRAPH WIRING
-# 1. Use set_conditional_entry_point to start the graph with our router.
-# This tells the graph that the very first step is to make a decision.
+# --- Wire the Graph ---
+# Set the conditional entry point to route to the correct node.
 workflow.set_conditional_entry_point(
     route_to_image_or_agent,
     {
@@ -72,11 +70,11 @@ workflow.set_conditional_entry_point(
     }
 )
 
-# 2. Define the path for the standard agent
+# Define the edges for the general agent workflow.
 workflow.add_conditional_edges("agent", should_continue, {"tools": "tools", "__end__": END})
 workflow.add_edge("tools", "agent")
 
-# 3. Define the path for the image generation node (it's a single step)
+# Define the edge for the image generation workflow.
 workflow.add_edge("generate_image_node", END)
 
 # Compile the graph into a runnable application
