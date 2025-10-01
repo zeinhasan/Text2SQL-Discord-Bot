@@ -34,11 +34,11 @@ def export_data_to_excel(data: List[Dict], filename: str = "query_result.xlsx") 
 
 def find_excel_path_in_response(response_text: str) -> str | None:
     """
-    Searches the agent's final text response for a file path to an Excel file.
+    Searches the agent's final text response for an Excel file path.
     """
     print(f"--- [UTILS] Searching for Excel path in: '{response_text}' ---")
-    # This regex is OS-agnostic and looks for a path starting with 'output'
-    match = re.search(r"output[/\\][^\s]+\.xlsx", response_text, re.IGNORECASE)
+    # This regex now finds both absolute and relative paths.
+    match = re.search(r"([a-zA-Z]:[\\/]|[/]|[\\/])?[\w\\/.-]*output[\\/][\w\\/.-]+\.xlsx", response_text, re.IGNORECASE)
     
     if match:
         os_specific_path = os.path.normpath(match.group(0).strip(".,'\"()"))
@@ -52,11 +52,11 @@ def find_excel_path_in_response(response_text: str) -> str | None:
 
 def find_image_path_in_response(response_text: str) -> str | None:
     """
-    Searches the agent's final text response for a file path to an image file.
+    Searches the agent's final text response for an image file path.
     """
     print(f"--- [UTILS] Searching for image path in: '{response_text}' ---")
-    # This regex is OS-agnostic and looks for common image extensions in the 'output' folder
-    match = re.search(r"output[/\\][^\s]+\.(png|jpg|jpeg)", response_text, re.IGNORECASE)
+    # This regex now finds both absolute and relative paths.
+    match = re.search(r"([a-zA-Z]:[\\/]|[/]|[\\/])?[\w\\/.-]*output[\\/][\w\\/.-]+\.(png|jpg|jpeg)", response_text, re.IGNORECASE)
     
     if match:
         os_specific_path = os.path.normpath(match.group(0).strip(".,'\"()"))

@@ -1,42 +1,64 @@
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 
 from lang.state.state import AgentState
-from lang.tools.tools import all_tools
+from lang.tools.tools import all_tools, generate_image
 from config import llm
 
-# --- A CUSTOM PROMPT FOR OUR AGENT ---
+# --- Final, Corrected Agent Prompt ---
 agent_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", """You are a powerful AI assistant. You can use tools to query a database or you can answer questions based on content from an uploaded file.
-
-        - If the user's message includes text from a file (PDF, TXT, CSV), you MUST prioritize that content to answer their question.
-        - If the user uploads an image, describe it or answer questions about it.
-        - If the user asks to "list tables," use the `get_database_tables` tool.
-        - If the request involves "export," "file," or "excel" for database information, use the `export_database_info_to_excel` tool.
-        - For other database queries, use the `get_database_info` tool.
-        - For general conversation, answer directly without using tools."""),
+        ("system", """You are a powerful AI assistant. Your primary function is to answer questions using the provided tools. Follow these rules without deviation:
+        1.  **Default to Displaying Data**: For any request to "get", "show", "find", "view", or "extract" data, you MUST use the `query_database` tool to display the results directly in the chat.
+        2.  **Strict Export Condition**: You are ONLY allowed to use the `export_to_excel` tool if the user's message contains the specific words 'export' or 'excel'.
+        3.  **Exporting Rule**: When you use the `export_to_excel` tool, you MUST provide the `table_name` argument. You will extract this table name from the SQL query you generate. The tool will handle filename creation automatically. Do NOT attempt to create a filename yourself.
+        4.  **Handle File Paths**: When a tool successfully creates a file (Excel or image), it will return a file path. Your final answer to the user MUST include this full, unmodified file path.
+        """),
         MessagesPlaceholder(variable_name="messages"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ]
 )
 
-# --- AGENT EXECUTOR ---
+# --- Agent Executor (No Changes) ---
 agent_runnable = create_tool_calling_agent(llm, all_tools, agent_prompt)
 agent_executor = AgentExecutor(agent=agent_runnable, tools=all_tools, verbose=True)
 
 
 def agent_node(state: AgentState) -> dict:
     """
-    Executes the agent with the current conversation state.
-
-    Args:
-        state (AgentState): The current state of the graph.
-
-    Returns:
-        A dictionary containing the agent's response messages.
+    The primary agent node that handles database queries, file Q&A, and general chat.
     """
-    print("--- [NODE] Executing Agent Node ---")
+    print("--- [NODE] Executing General Agent Node ---")
     response = agent_executor.invoke(state)
     return {"messages": [AIMessage(content=response["output"])]}
+
+
+def generate_image_node(state: AgentState) -> dict:
+    """
+a dedicated node that directly calls the image generation tool.
+    """
+    print("--- [NODE] Executing Dedicated Image Generation Node ---")
+    last_message = state["messages"][-1]
+    prompt = ""
+    base64_image_data = None
+
+    if isinstance(last_message.content, list):
+        for part in last_message.content:
+            if isinstance(part, dict):
+                if part.get("type") == "text":
+                    prompt = part.get("text", "")
+                elif part.get("type") == "image_url":
+                    image_uri = part.get("image_url", {}).get("url", "")
+                    if "base64," in image_uri:
+                        base64_image_data = image_uri.split(',')[-1]
+
+    if not prompt:
+        return {"messages": [AIMessage(content="I see an image, but I need a text prompt to know what to do with it.")]}
+        
+    result = generate_image.invoke({
+        "prompt": prompt,
+        "base64_image_data": base64_image_data
+    })
+    
+    return {"messages": [AIMessage(content=result)]}

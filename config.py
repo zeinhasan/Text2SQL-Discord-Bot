@@ -16,21 +16,24 @@ DB_NAME = os.getenv("DB_NAME")
 
 # --- LLM (Gemini) Model Credentials & Configuration ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-# Use a multimodal model that supports text and image inputs.
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash-latest")
 
 # --- Central LLM Object Initialization ---
 print("--- [CONFIG] Initializing LLM... ---")
+# This model is for general chat and tool use (non-image tasks)
 llm = ChatGoogleGenerativeAI(
     model=GEMINI_MODEL_NAME,
     google_api_key=GOOGLE_API_KEY,
     convert_system_message_to_human=True
 )
-# Create a new LLM object for image tasks
-print("--- [CONFIG] Creating image processing model instance... ---")
+print(f"--- [CONFIG] LLM Initialized with model: {GEMINI_MODEL_NAME} ---")
+
+
+# specifically for generating and modifying images.
+print("--- [CONFIG] Initializing Image Generation LLM... ---")
 image_llm = ChatGoogleGenerativeAI(
     model="gemini-2.5-flash-image-preview",
     google_api_key=GOOGLE_API_KEY,
     convert_system_message_to_human=True
 )
-print(f"--- [CONFIG] LLM Initialized with model: {GEMINI_MODEL_NAME} ---")
+print("--- [CONFIG] Image LLM Initialized with model: gemini-2.5-flash-image-preview ---")

@@ -2,11 +2,11 @@ import discord
 from discord.ext import commands
 import os
 import asyncio
-from utils import find_excel_path_in_response, find_image_path_in_response
-from config import DISCORD_TOKEN, llm
+from config import DISCORD_TOKEN
 from lang.graph.graph import app
 from lang.tools.file_processor import process_uploaded_file
 from langchain_core.messages import HumanMessage
+from utils import find_excel_path_in_response, find_image_path_in_response
 
 # --- Bot Initialization ---
 intents = discord.Intents.default()
@@ -40,101 +40,97 @@ async def help_command(ctx):
 
     You can ask me questions about data in the database, about files you upload, or request image generation.
 
-    **Database Queries:**
-    - `@YourBotName show me all users from the customers table`
-    - `@YourBotName what is the total sales for the last month?`
-    - `@YourBotName show me the top 5 products and export the result to excel`
+    **How to interact with me:**
+    - Mention me (`@botzein`) with your question.
+    - To generate an image, mention me, describe the image you want, and attach a reference image if needed.
+    - Example: `@botzein Create a logo for a coffee shop, using this color palette.` (with an image attached).
 
-    **File-based Questions:**
-    - Upload a file (PDF, TXT, CSV, XLSX, PNG, JPG) and **@mention me** with your question in the comment.
-    - Example: `(upload a sales_report.pdf) @YourBotName what were the total profits in Q3?`
-
-    **Image Generation:**
-    - `@YourBotName create an image of a cat playing a guitar`
-    - `@YourBotName modify this image (upload image) to make the cat wear a hat`
+    **What I can do:**
+    - Answer questions based on the connected database.
+    - Export data from the database to an Excel file.
+    - Read and understand content from `.txt`, `.pdf`, `.csv`, and `.xlsx` files.
+    - Generate or modify images based on your text prompts and uploaded images.
     """
     await ctx.send(help_text)
 
 @bot.event
-async def on_message(message: discord.Message):
+async def on_message(message):
     """
-    Handles incoming messages and processes them if the bot is mentioned.
+    Handles incoming messages, processing mentions and attachments.
     """
-    await bot.process_commands(message)
-
-    if message.author == bot.user or not bot.user.mentioned_in(message):
+    if message.author == bot.user:
         return
 
-    user_message = message.content.replace(f'<@!{bot.user.id}>', '').strip()
-    print(f"\n--- [ON_MESSAGE] Received mention from {message.author}: '{user_message}' ---")
-    
-    final_user_content = user_message
-    
-    if message.attachments:
-        print(f"--- [ON_MESSAGE] Found {len(message.attachments)} attachment(s). ---")
-        attachment = message.attachments[0]
-        file_path = os.path.join("uploads", attachment.filename)
-        await attachment.save(file_path)
-        print(f"--- [ON_MESSAGE] Saved attachment to {file_path} ---")
+    if bot.user.mentioned_in(message):
+        user_message = message.content.replace(f"<@{bot.user.id}>", "").strip()
+        print(f"--- [ON_MESSAGE] Received mention from {message.author}: '{user_message}' ---")
+
+        thread = await message.channel.create_thread(name=f"Responding to {message.author.display_name}", type=discord.ChannelType.public_thread)
         
-        processed_file = process_uploaded_file(file_path)
-        
-        if processed_file['type'] == 'image':
-            image_data = processed_file['content']
-            final_user_content = [
-                {"type": "text", "text": user_message},
-                {"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_data}"}
-            ]
-            print("--- [ON_MESSAGE] Prepared multimodal input for LLM (image). ---")
-        else:
-            file_text_content = processed_file['content']
-            final_user_content = f"{file_text_content}\n\n---\n\nUser Question: {user_message}"
-            print("--- [ON_MESSAGE] Prepended text file content to user message. ---")
+        # --- FIX: Store the status message object ---
+        # Instead of just sending a message, we store it in the 'status_message' variable.
+        status_message = await thread.send("Processing your request...")
 
-    if not user_message and not message.attachments:
-        await message.channel.send("How can I help you?")
-        return
+        final_user_content = user_message
 
-    thread = await message.channel.send(f"⏳ Processing your request...")
-    
-    inputs = {"messages": [HumanMessage(content=final_user_content)]}
+        try:
+            if message.attachments:
+                print(f"--- [ON_MESSAGE] Found {len(message.attachments)} attachment(s). ---")
+                attachment = message.attachments[0]
+                file_path = os.path.join("uploads", attachment.filename)
+                await attachment.save(file_path)
+                print(f"--- [ON_MESSAGE] Saved attachment to {file_path} ---")
 
-    try:
-        loop = asyncio.get_running_loop()
-        final_state = await loop.run_in_executor(None, lambda: app.invoke(inputs))
-        
-        print("--- [ON_MESSAGE] LangGraph invocation finished. Processing final state. ---")
-        response_content = str(final_state['messages'][-1].content).strip()
+                processed_file = process_uploaded_file(file_path)
 
-        excel_file_path = find_excel_path_in_response(response_content)
-        image_file_path = find_image_path_in_response(response_content)
+                if processed_file['type'] == 'image':
+                    image_data = processed_file['content']
+                    final_user_content = [
+                        {"type": "text", "text": user_message},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                    ]
+                    print("--- [ON_MESSAGE] Prepared multimodal input for LLM (image). ---")
+                else:
+                    file_text_content = processed_file['content']
+                    final_user_content = f"File Content:\n{file_text_content}\n\n---\n\nUser Question: {user_message}"
+                    print("--- [ON_MESSAGE] Prepended text file content to user message. ---")
 
-        if excel_file_path:
-            print(f"--- [ON_MESSAGE] Sending Excel file: {excel_file_path} ---")
-            await thread.edit(content="Here is the Excel file you requested:")
-            await message.channel.send(file=discord.File(excel_file_path))
-        elif image_file_path:
-            print(f"--- [ON_MESSAGE] Sending Image file: {image_file_path} ---")
-            await thread.edit(content="Here is your generated image:")
-            await message.channel.send(file=discord.File(image_file_path))
-        else:
-            print(f"--- [ON_MESSAGE] No file path found. Sending text response. ---")
-            if len(response_content) > 1900:
-                summary_prompt = f"Please summarize the following text into a short, readable response for Discord: {response_content}"
-                print("--- [ON_MESSAGE] Response is too long. Asking LLM for a summary. ---")
-                summary_response = await loop.run_in_executor(None, lambda: llm.invoke(summary_prompt))
-                await thread.edit(content=summary_response.content)
+            inputs = {"messages": [HumanMessage(content=final_user_content)]}
+            
+            print("--- [ON_MESSAGE] Invoking LangGraph with prepared inputs... ---")
+            loop = asyncio.get_event_loop()
+            final_state = await loop.run_in_executor(None, lambda: app.invoke(inputs))
+            
+            print("--- [ON_MESSAGE] LangGraph invocation finished. Processing final state. ---")
+            response_content = str(final_state['messages'][-1].content).strip()
+
+            excel_file_path = find_excel_path_in_response(response_content)
+            image_file_path = find_image_path_in_response(response_content)
+
+            if excel_file_path:
+                print(f"--- [ON_MESSAGE] Sending Excel file: {excel_file_path} ---")
+                # --- FIX: Edit the 'status_message' content ---
+                await status_message.edit(content="Here is the Excel file you requested:")
+                await thread.send(file=discord.File(excel_file_path))
+            elif image_file_path:
+                print(f"--- [ON_MESSAGE] Sending Image file: {image_file_path} ---")
+                # --- FIX: Edit the 'status_message' content ---
+                await status_message.edit(content="Here is your generated image:")
+                await thread.send(file=discord.File(image_file_path))
             else:
-                await thread.edit(content=response_content)
+                print(f"--- [ON_MESSAGE] No file path found. Sending text response. ---")
+                # --- FIX: Edit the 'status_message' content ---
+                await status_message.edit(content=response_content)
 
-    except Exception as e:
-        print(f"--- [ON_MESSAGE_ERROR] An unexpected error occurred: {e} ---")
-        await thread.edit(content=f"An unexpected error occurred. Please check the logs.")
+        except Exception as e:
+            print(f"--- [ON_MESSAGE_ERROR] An unexpected error occurred: {e} ---")
+            # --- FIX: Edit the 'status_message' content ---
+            await status_message.edit(content=f"An unexpected error occurred. Please check the logs.")
 
 # --- Run the Bot ---
 if __name__ == "__main__":
     if not DISCORD_TOKEN:
-        print("--- [FATAL_ERROR] DISCORD_TOKEN is not set in the .env file. ---")
+        print("--- [FATAL_ERROR] DISCORD_TOKEN is not set. Please check your .env file. ---")
     else:
         print("--- [MAIN] Starting bot... ---")
         bot.run(DISCORD_TOKEN)
