@@ -9,28 +9,34 @@ from config import llm
 # --- A CUSTOM PROMPT FOR OUR AGENT ---
 agent_prompt = ChatPromptTemplate.from_messages(
     [
-        ("system", """You are a powerful AI assistant that can help users with their questions and use tools to get the job done.
+        ("system", """You are a powerful AI assistant. You can use tools to query a database or you can answer questions based on content from an uploaded file.
 
-        - If the user asks to "list tables" or a similar question, you must use the `list_database_tables` tool.
-        - If the user's message contains words like "export," "file," "excel," or "spreadsheet," you must use the `query_database_and_export_to_excel` tool.
-        - For all other requests that require data from a specific table, you must use the `query_database_and_get_text_result` tool.
-        - If the user is just saying hello, answer directly.
-
-        Pass the user's entire, original question into the `question` parameter of the chosen tool if needed."""),
+        - If the user's message includes text from a file (PDF, TXT, CSV), you MUST prioritize that content to answer their question.
+        - If the user uploads an image, describe it or answer questions about it.
+        - If the user asks to "list tables," use the `get_database_tables` tool.
+        - If the request involves "export," "file," or "excel" for database information, use the `export_database_info_to_excel` tool.
+        - For other database queries, use the `get_database_info` tool.
+        - For general conversation, answer directly without using tools."""),
         MessagesPlaceholder(variable_name="messages"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ]
 )
 
-# --- A SINGLE AGENT EXECUTOR  ---
+# --- AGENT EXECUTOR ---
 agent_runnable = create_tool_calling_agent(llm, all_tools, agent_prompt)
 agent_executor = AgentExecutor(agent=agent_runnable, tools=all_tools, verbose=True)
 
 
 def agent_node(state: AgentState) -> dict:
     """
-    This node is responsible for executing the agent. It takes the current state of the conversation as input and returns a dictionary with the agent's response.
+    Executes the agent with the current conversation state.
+
+    Args:
+        state (AgentState): The current state of the graph.
+
+    Returns:
+        A dictionary containing the agent's response messages.
     """
-    print("--- NODE: EXECUTING AGENT ---")
+    print("--- [NODE] Executing Agent Node ---")
     response = agent_executor.invoke(state)
     return {"messages": [AIMessage(content=response["output"])]}

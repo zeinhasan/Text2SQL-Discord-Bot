@@ -6,12 +6,11 @@ class AgentState(TypedDict):
     """
     Represents the state of our agent graph.
 
+    This TypedDict defines the structure of the data that is passed between
+    the nodes of the LangGraph workflow.
+
     Attributes:
         messages (List[BaseMessage]): The history of messages in the conversation.
-        query_result (List[Dict[str, Any]] | None): The result from a SQL query execution.
-        file_path (str | None): The path to a generated file, if any.
+        `add_messages` ensures new messages are appended to the list, not overwritten.
     """
-    # `add_messages` ensures new messages are appended to the list, not overwritten.
     messages: Annotated[List[BaseMessage], add_messages]
-    query_result: List[Dict[str, Any]] | None
-    file_path: str | None

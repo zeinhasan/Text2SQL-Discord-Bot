@@ -1,9 +1,8 @@
-# config.py
 import os
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-# Load variables from the .env file
+# Load environment variables from a .env file.
 load_dotenv()
 
 # --- Discord Credentials ---
@@ -17,11 +16,11 @@ DB_NAME = os.getenv("DB_NAME")
 
 # --- LLM (Gemini) Model Credentials & Configuration ---
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME")
+# Use a multimodal model that supports text and image inputs.
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash-latest")
 
 # --- Central LLM Object Initialization ---
-# This object will be imported and used by other files (e.g., node.py)
-print(" --- [CONFIG] Initializing LLM... ---")
+print("--- [CONFIG] Initializing LLM... ---")
 llm = ChatGoogleGenerativeAI(
     model=GEMINI_MODEL_NAME,
     google_api_key=GOOGLE_API_KEY,
