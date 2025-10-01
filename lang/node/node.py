@@ -45,6 +45,7 @@ A dedicated node that directly calls the image generation tool.
     prompt = ""
     base64_image_data = None
 
+    # Multi modal mode
     if isinstance(last_message.content, list):
         for part in last_message.content:
             if isinstance(part, dict):
@@ -55,9 +56,16 @@ A dedicated node that directly calls the image generation tool.
                     if "base64," in image_uri:
                         base64_image_data = image_uri.split(',')[-1]
 
+    elif isinstance(last_message.content, str):
+        print("--- [NODE] Processing text-only image request. ---")
+        prompt = last_message.content
+    
     if not prompt:
-        return {"messages": [AIMessage(content="I see an image, but I need a text prompt to know what to do with it.")]}
-        
+        error_message = "A text prompt is required to generate an image. For example: 'create a photo of a cat'."
+        print(f"--- [NODE_ERROR] {error_message} ---")
+        return {"messages": [AIMessage(content=error_message)]}
+    
+    print(f"--- [NODE] Calling image tool with prompt: '{prompt}' ---")
     result = generate_image.invoke({
         "prompt": prompt,
         "base64_image_data": base64_image_data

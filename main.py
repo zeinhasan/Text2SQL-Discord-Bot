@@ -84,7 +84,7 @@ async def on_message(message):
             # --- Attachment Handling ---
             if message.attachments:
                 print(f"--- [ON_MESSAGE] Found {len(message.attachments)} attachment(s). ---")
-                attachment = message.attachments
+                attachment = message.attachments[0]
                 file_path = os.path.join("uploads", attachment.filename)
                 await attachment.save(file_path)
                 print(f"--- [ON_MESSAGE] Saved attachment to {file_path} ---")

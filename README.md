@@ -148,3 +148,25 @@ Once the bot is running and has been added to your Discord server, you can inter
 
 - **File Q&A:**
   > Upload a `.csv` file and ask: `@YourBot what is the summary of this data?`
+
+## Running with Docker
+
+You can also run the bot inside a Docker container for easier deployment and dependency management.
+
+### 1. Build the Docker Image
+
+From the root directory of the project, run the following command:
+
+```bash
+docker build -t text2sql-discord-bot .
+```
+
+### 2. Run the Docker Container
+
+Make sure your `.env` file is correctly filled out. Then, run the container using the following command:
+
+```bash
+docker run --env-file .env text2sql-discord-bot
+```
+
+The bot will now be running inside the container and should connect to Discord.
